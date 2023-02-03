@@ -33,7 +33,7 @@ export default (configs?: Parameters<typeof getConfig>[0], outputdir?: string) =
     writeRouteFile({
       config: {
         input: config.output,
-        baseURL,
+        baseURL: config.baseURL ?? baseURL,
         outputMode: config.outputMode,
         outputEachDir: config.outputEachDir,
         trailingSlash: config.trailingSlash
