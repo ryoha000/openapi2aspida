@@ -23,7 +23,7 @@ export default (
       if (isRefObject(target)) {
         prop = $ref2Type(target.$ref)
       } else {
-        const value = schema2value(target.schema, required)
+        const value = schema2value(openapi, target.schema, required)
         if (!value) return null
 
         prop = {

@@ -1,5 +1,6 @@
 import { OpenAPIV3 } from 'openapi-types'
 import { Prop, PropValue } from './props2String'
+import { resolveSchemasRef } from './resolvers'
 
 export const defKey2defName = (key: string) =>
   `${key[0].replace(/^([^a-zA-Z$_])$/, '$$$1').toUpperCase()}${key
@@ -42,7 +43,7 @@ export const getPropertyName = (name: string) =>
 
 const of2Values = (obj: OpenAPIV3.SchemaObject, required: boolean): PropValue[] | null => {
   const values = (obj.oneOf || obj.allOf || obj.anyOf || [])
-    .map(p => schema2value(p, required))
+    .map(p => schema2value(undefined, p, required))
     .filter(v => v) as PropValue[]
   return values.length ? values : null
 }
@@ -56,7 +57,7 @@ const object2value = (obj: OpenAPIV3.NonArraySchemaObject, required: boolean): P
       return isRefObject(target) || !target.deprecated
     })
     .map<Prop | null>(name => {
-      const val = schema2value(properties[name], required)
+      const val = schema2value(undefined, properties[name], required)
       if (!val) return null
 
       return {
@@ -79,7 +80,7 @@ const object2value = (obj: OpenAPIV3.NonArraySchemaObject, required: boolean): P
             description: null,
             value: 'any'
           }
-        : schema2value(additionalProps, required)
+        : schema2value(undefined, additionalProps, required)
 
     if (val)
       value.push({
@@ -96,11 +97,13 @@ const object2value = (obj: OpenAPIV3.NonArraySchemaObject, required: boolean): P
 export const BINARY_TYPE = '(File | ReadStream)'
 
 export const schema2value = (
-  schema: OpenAPIV3.ReferenceObject | OpenAPIV3.SchemaObject | undefined,
+  openapi: OpenAPIV3.Document | undefined,
+  _schema: OpenAPIV3.ReferenceObject | OpenAPIV3.SchemaObject | undefined,
   required: boolean,
   isResponse?: true
 ): PropValue | null => {
-  if (!schema) return null
+  if (!_schema) return null
+  let schema = _schema
 
   let isArray = false
   let isEnum = false
@@ -108,6 +111,10 @@ export const schema2value = (
   let hasOf: PropValue['hasOf']
   let value: PropValue['value'] | null = null
   let description: PropValue['description'] = null
+
+  if (isRefObject(schema) && openapi) {
+    schema = resolveSchemasRef(openapi, schema.$ref)
+  }
 
   if (isRefObject(schema)) {
     value = $ref2Type(schema.$ref)
@@ -123,7 +130,7 @@ export const schema2value = (
       value = schema.type === 'string' ? schema.enum.map(e => `'${e}'`) : schema.enum
     } else if (isArraySchema(schema)) {
       isArray = true
-      value = schema2value(schema.items, required)
+      value = schema2value(openapi, schema.items, required)
     } else if (schema.properties || schema.additionalProperties) {
       value = object2value(schema, required)
     } else if (schema.format === 'binary') {

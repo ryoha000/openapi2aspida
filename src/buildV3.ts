@@ -50,6 +50,7 @@ export default (openapi: OpenAPIV3.Document) => {
             .map(p =>
               getDirName(
                 p,
+                openapi,
                 [
                   ...getParamsList(openapi, openapi.paths[path]!.parameters),
                   ...methodProps.reduce(
@@ -105,7 +106,7 @@ export default (openapi: OpenAPIV3.Document) => {
                         break
                     }
                   } else {
-                    const value = schema2value(p.schema, false)
+                    const value = schema2value(openapi, p.schema, false)
                     if (!value) return
 
                     const prop = {
@@ -203,7 +204,7 @@ export default (openapi: OpenAPIV3.Document) => {
                   ref.content?.[Object.keys(ref.content)[0]]
 
                 if (content?.schema) {
-                  const val = schema2value(content.schema, true, true)
+                  const val = schema2value(openapi, content.schema, true, true)
                   val &&
                     params.push({
                       name: 'resBody',
@@ -234,7 +235,7 @@ export default (openapi: OpenAPIV3.Document) => {
                                   description: null,
                                   value: $ref2Type(headerData.$ref)
                                 }
-                              : schema2value(headerData.schema, true)
+                              : schema2value(openapi, headerData.schema, true)
 
                             return (
                               val && {
@@ -287,6 +288,7 @@ export default (openapi: OpenAPIV3.Document) => {
                 if (target.requestBody.content['multipart/form-data']?.schema) {
                   reqFormat = 'FormData'
                   reqBody = schema2value(
+                    openapi,
                     target.requestBody.content['multipart/form-data'].schema,
                     true
                   )
@@ -295,6 +297,7 @@ export default (openapi: OpenAPIV3.Document) => {
                 ) {
                   reqFormat = 'URLSearchParams'
                   reqBody = schema2value(
+                    openapi,
                     target.requestBody.content['application/x-www-form-urlencoded'].schema,
                     true
                   )
@@ -305,7 +308,7 @@ export default (openapi: OpenAPIV3.Document) => {
                       key.startsWith('application/')
                     )?.[1]
 
-                  if (content?.schema) reqBody = schema2value(content.schema, true)
+                  if (content?.schema) reqBody = schema2value(openapi, content.schema, true)
                 }
               }
 
